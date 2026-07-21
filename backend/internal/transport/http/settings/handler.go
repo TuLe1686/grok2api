@@ -113,10 +113,14 @@ type clientKeyDefaultsConfigDTO struct {
 }
 
 type accountsConfigDTO struct {
-	AutoCleanReauthEnabled   bool   `json:"autoCleanReauthEnabled"`
-	AutoCleanReauthInterval  string `json:"autoCleanReauthInterval"`
-	AutoCleanReauthMinAge    string `json:"autoCleanReauthMinAge"`
-	AutoCleanIncludeDisabled bool   `json:"autoCleanIncludeDisabled"`
+	AutoCleanReauthEnabled                      bool   `json:"autoCleanReauthEnabled"`
+	AutoCleanReauthInterval                     string `json:"autoCleanReauthInterval"`
+	AutoCleanReauthMinAge                       string `json:"autoCleanReauthMinAge"`
+	AutoCleanIncludeDisabled                    bool   `json:"autoCleanIncludeDisabled"`
+	BuildChatPermissionDeniedRequestDisable     bool   `json:"buildChatPermissionDeniedRequestDisable"`
+	BuildChatPermissionDeniedInspectEnabled     bool   `json:"buildChatPermissionDeniedInspectEnabled"`
+	BuildChatPermissionDeniedInspectInterval    string `json:"buildChatPermissionDeniedInspectInterval"`
+	BuildChatPermissionDeniedInspectConcurrency int    `json:"buildChatPermissionDeniedInspectConcurrency"`
 }
 
 type settingsResponse struct {
@@ -214,10 +218,14 @@ func (value settingsConfigDTO) toApplication() settingsapp.EditableConfig {
 	}
 	if value.Accounts != nil {
 		result.Accounts = settingsapp.AccountsConfig{
-			AutoCleanReauthEnabled:   value.Accounts.AutoCleanReauthEnabled,
-			AutoCleanReauthInterval:  value.Accounts.AutoCleanReauthInterval,
-			AutoCleanReauthMinAge:    value.Accounts.AutoCleanReauthMinAge,
-			AutoCleanIncludeDisabled: value.Accounts.AutoCleanIncludeDisabled,
+			AutoCleanReauthEnabled:                      value.Accounts.AutoCleanReauthEnabled,
+			AutoCleanReauthInterval:                     value.Accounts.AutoCleanReauthInterval,
+			AutoCleanReauthMinAge:                       value.Accounts.AutoCleanReauthMinAge,
+			AutoCleanIncludeDisabled:                    value.Accounts.AutoCleanIncludeDisabled,
+			BuildChatPermissionDeniedRequestDisable:     value.Accounts.BuildChatPermissionDeniedRequestDisable,
+			BuildChatPermissionDeniedInspectEnabled:     value.Accounts.BuildChatPermissionDeniedInspectEnabled,
+			BuildChatPermissionDeniedInspectInterval:    value.Accounts.BuildChatPermissionDeniedInspectInterval,
+			BuildChatPermissionDeniedInspectConcurrency: value.Accounts.BuildChatPermissionDeniedInspectConcurrency,
 		}
 		result.AccountsProvided = true
 	}
@@ -273,10 +281,14 @@ func newSettingsResponse(value settingsapp.Snapshot) settingsResponse {
 				RPMLimit: config.ClientKeyDefaults.RPMLimit, MaxConcurrent: config.ClientKeyDefaults.MaxConcurrent,
 			},
 			Accounts: &accountsConfigDTO{
-				AutoCleanReauthEnabled:   config.Accounts.AutoCleanReauthEnabled,
-				AutoCleanReauthInterval:  config.Accounts.AutoCleanReauthInterval,
-				AutoCleanReauthMinAge:    config.Accounts.AutoCleanReauthMinAge,
-				AutoCleanIncludeDisabled: config.Accounts.AutoCleanIncludeDisabled,
+				AutoCleanReauthEnabled:                      config.Accounts.AutoCleanReauthEnabled,
+				AutoCleanReauthInterval:                     config.Accounts.AutoCleanReauthInterval,
+				AutoCleanReauthMinAge:                       config.Accounts.AutoCleanReauthMinAge,
+				AutoCleanIncludeDisabled:                    config.Accounts.AutoCleanIncludeDisabled,
+				BuildChatPermissionDeniedRequestDisable:     config.Accounts.BuildChatPermissionDeniedRequestDisable,
+				BuildChatPermissionDeniedInspectEnabled:     config.Accounts.BuildChatPermissionDeniedInspectEnabled,
+				BuildChatPermissionDeniedInspectInterval:    config.Accounts.BuildChatPermissionDeniedInspectInterval,
+				BuildChatPermissionDeniedInspectConcurrency: config.Accounts.BuildChatPermissionDeniedInspectConcurrency,
 			},
 		},
 		RecommendedProviderBuild: providerBuildRecommendationDTO{

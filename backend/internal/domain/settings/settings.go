@@ -110,4 +110,12 @@ type AccountsConfig struct {
 	AutoCleanReauthMinAge time.Duration
 	// AutoCleanIncludeDisabled 为 true 时，reauth 清理时包含 enabled=false 的账号。
 	AutoCleanIncludeDisabled bool
+	// BuildChatPermissionDeniedRequestDisable 请求路径命中 Build chat permission-denied 时禁用整号。
+	BuildChatPermissionDeniedRequestDisable bool
+	// BuildChatPermissionDeniedInspectEnabled 定时探测 enabled Build 账号并禁用 chat permission-denied。
+	BuildChatPermissionDeniedInspectEnabled bool
+	// BuildChatPermissionDeniedInspectInterval 定时巡检间隔。
+	BuildChatPermissionDeniedInspectInterval time.Duration
+	// BuildChatPermissionDeniedInspectConcurrency 巡检并发上限（由 refresh 池实际限流）。
+	BuildChatPermissionDeniedInspectConcurrency int
 }

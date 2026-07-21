@@ -728,9 +728,14 @@ attemptLoop:
 			}
 			if s.providers.SupportsCredentialRefresh(credential.Provider) && lastFailure.PermanentAccountDenial {
 				if credential.Provider == accountdomain.ProviderBuild {
-					// A Build account may lack permission for one chat model while its OAuth credential and video
-					// access remain valid. Isolate this denial to the model; reauthorization is needed only when the credential is rejected.
-					s.selector.MarkModelAccessDenied(ctx, credential, route.UpstreamModel, retryAfter)
+					// Chat endpoint permission-denied on Build is treated as whole-account failure:
+					// disable the account so it leaves the pool instead of only blocking one model.
+					if s.accounts != nil && s.accounts.RequestDisableBuildChatPermissionDenied() {
+						s.disableBuildChatPermissionDenied(ctx, credential)
+					} else {
+						// Fallback keeps previous model-scoped isolation when runtime disable is turned off.
+						s.selector.MarkModelAccessDenied(ctx, credential, route.UpstreamModel, retryAfter)
+					}
 				} else {
 					_ = s.accounts.MarkReauthRequired(ctx, credential.ID, fmt.Sprintf("%s chat endpoint access denied", credential.Provider))
 					s.selector.MarkQuotaStateChanged(credential.Provider)
@@ -912,6 +917,19 @@ func (s *Service) markSSOCredentialRejected(ctx context.Context, credential acco
 	}
 	// Discard the process-local one-second candidate snapshot even if persistence fails,
 	// preventing the invalid account from being selected by the next request.
+	s.selector.MarkQuotaStateChanged(credential.Provider)
+}
+
+func (s *Service) disableBuildChatPermissionDenied(ctx context.Context, credential accountdomain.Credential) {
+	if credential.Provider != accountdomain.ProviderBuild || s.accounts == nil {
+		return
+	}
+	writeCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), finalizationTimeout)
+	defer cancel()
+	if err := s.accounts.DisableBuildChatPermissionDenied(writeCtx, credential, "Build chat endpoint permission-denied"); err != nil {
+		s.logger.Error("build_chat_permission_denied_disable_failed", "account_id", credential.ID, "provider", credential.Provider, "error", err)
+	}
+	// Always drop sticky and candidate cache so the disabled account is not selected again in this process.
 	s.selector.MarkQuotaStateChanged(credential.Provider)
 }
 

@@ -57,6 +57,12 @@ bootstrapAdmin:
 	if cfg.Accounts.AutoCleanReauthInterval.Value() != 10*time.Minute || cfg.Accounts.AutoCleanReauthMinAge.Value() != time.Hour {
 		t.Fatalf("accounts auto-clean defaults = %#v", cfg.Accounts)
 	}
+	if !cfg.Accounts.BuildChatPermissionDeniedRequestDisable || !cfg.Accounts.BuildChatPermissionDeniedInspectEnabled {
+		t.Fatalf("build chat permission-denied defaults = %#v", cfg.Accounts)
+	}
+	if cfg.Accounts.BuildChatPermissionDeniedInspectInterval.Value() != 30*time.Minute || cfg.Accounts.BuildChatPermissionDeniedInspectConcurrency != 4 {
+		t.Fatalf("build chat permission-denied inspect defaults = %#v", cfg.Accounts)
+	}
 	if !cfg.Routing.ReasoningReplayEnabled || cfg.Routing.ReasoningReplayTTL.Value() != time.Hour || cfg.Routing.ReasoningReplayMaxEntries != 10240 {
 		t.Fatalf("reasoning replay defaults = %#v", cfg.Routing)
 	}

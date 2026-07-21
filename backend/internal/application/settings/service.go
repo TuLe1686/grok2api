@@ -113,10 +113,14 @@ type ClientKeyDefaultsConfig struct {
 
 // AccountsConfig 是管理接口使用的账号池维护策略输入。
 type AccountsConfig struct {
-	AutoCleanReauthEnabled   bool
-	AutoCleanReauthInterval  string
-	AutoCleanReauthMinAge    string
-	AutoCleanIncludeDisabled bool
+	AutoCleanReauthEnabled                      bool
+	AutoCleanReauthInterval                     string
+	AutoCleanReauthMinAge                       string
+	AutoCleanIncludeDisabled                    bool
+	BuildChatPermissionDeniedRequestDisable     bool
+	BuildChatPermissionDeniedInspectEnabled     bool
+	BuildChatPermissionDeniedInspectInterval    string
+	BuildChatPermissionDeniedInspectConcurrency int
 }
 
 // EditableConfig 聚合管理端允许修改的运行参数。
@@ -351,6 +355,20 @@ func applyDomainConfig(base config.Config, value settingsdomain.Config) config.C
 	}
 	base.Accounts.AutoCleanReauthEnabled = value.Accounts.AutoCleanReauthEnabled
 	base.Accounts.AutoCleanIncludeDisabled = value.Accounts.AutoCleanIncludeDisabled
+	// Build chat permission-denied defaults stay enabled unless an older snapshot
+	// explicitly stored false/zero. Positive duration restores a custom interval.
+	if value.Accounts.BuildChatPermissionDeniedInspectInterval > 0 {
+		base.Accounts.BuildChatPermissionDeniedInspectInterval = config.Duration(value.Accounts.BuildChatPermissionDeniedInspectInterval)
+	}
+	if value.Accounts.BuildChatPermissionDeniedInspectConcurrency > 0 {
+		base.Accounts.BuildChatPermissionDeniedInspectConcurrency = value.Accounts.BuildChatPermissionDeniedInspectConcurrency
+	}
+	// Only apply bools from domain when they were present in a full settings snapshot
+	// path that includes the field. Older snapshots zero these; keep code defaults.
+	if value.Accounts.BuildChatPermissionDeniedInspectInterval > 0 || value.Accounts.BuildChatPermissionDeniedInspectConcurrency > 0 || value.Accounts.BuildChatPermissionDeniedRequestDisable || value.Accounts.BuildChatPermissionDeniedInspectEnabled {
+		base.Accounts.BuildChatPermissionDeniedRequestDisable = value.Accounts.BuildChatPermissionDeniedRequestDisable
+		base.Accounts.BuildChatPermissionDeniedInspectEnabled = value.Accounts.BuildChatPermissionDeniedInspectEnabled
+	}
 	return base
 }
 
@@ -401,10 +419,14 @@ func toDomainConfig(value config.Config) settingsdomain.Config {
 			RPMLimit: value.ClientKeyDefaults.RPMLimit, MaxConcurrent: value.ClientKeyDefaults.MaxConcurrent,
 		},
 		Accounts: settingsdomain.AccountsConfig{
-			AutoCleanReauthEnabled:   value.Accounts.AutoCleanReauthEnabled,
-			AutoCleanReauthInterval:  value.Accounts.AutoCleanReauthInterval.Value(),
-			AutoCleanReauthMinAge:    value.Accounts.AutoCleanReauthMinAge.Value(),
-			AutoCleanIncludeDisabled: value.Accounts.AutoCleanIncludeDisabled,
+			AutoCleanReauthEnabled:                      value.Accounts.AutoCleanReauthEnabled,
+			AutoCleanReauthInterval:                     value.Accounts.AutoCleanReauthInterval.Value(),
+			AutoCleanReauthMinAge:                       value.Accounts.AutoCleanReauthMinAge.Value(),
+			AutoCleanIncludeDisabled:                    value.Accounts.AutoCleanIncludeDisabled,
+			BuildChatPermissionDeniedRequestDisable:     value.Accounts.BuildChatPermissionDeniedRequestDisable,
+			BuildChatPermissionDeniedInspectEnabled:     value.Accounts.BuildChatPermissionDeniedInspectEnabled,
+			BuildChatPermissionDeniedInspectInterval:    value.Accounts.BuildChatPermissionDeniedInspectInterval.Value(),
+			BuildChatPermissionDeniedInspectConcurrency: value.Accounts.BuildChatPermissionDeniedInspectConcurrency,
 		},
 	}
 }
@@ -472,6 +494,11 @@ func mergeEditable(current config.Config, input EditableConfig) (config.Config, 
 	if input.AccountsProvided {
 		next.Accounts.AutoCleanReauthEnabled = input.Accounts.AutoCleanReauthEnabled
 		next.Accounts.AutoCleanIncludeDisabled = input.Accounts.AutoCleanIncludeDisabled
+		next.Accounts.BuildChatPermissionDeniedRequestDisable = input.Accounts.BuildChatPermissionDeniedRequestDisable
+		next.Accounts.BuildChatPermissionDeniedInspectEnabled = input.Accounts.BuildChatPermissionDeniedInspectEnabled
+		if input.Accounts.BuildChatPermissionDeniedInspectConcurrency > 0 {
+			next.Accounts.BuildChatPermissionDeniedInspectConcurrency = input.Accounts.BuildChatPermissionDeniedInspectConcurrency
+		}
 	}
 
 	type durationInput struct {
@@ -506,6 +533,13 @@ func mergeEditable(current config.Config, input EditableConfig) (config.Config, 
 			durationInput{"accounts.autoCleanReauthInterval", input.Accounts.AutoCleanReauthInterval, func(value config.Duration) { next.Accounts.AutoCleanReauthInterval = value }},
 			durationInput{"accounts.autoCleanReauthMinAge", input.Accounts.AutoCleanReauthMinAge, func(value config.Duration) { next.Accounts.AutoCleanReauthMinAge = value }},
 		)
+		if strings.TrimSpace(input.Accounts.BuildChatPermissionDeniedInspectInterval) != "" {
+			durations = append(durations, durationInput{
+				"accounts.buildChatPermissionDeniedInspectInterval",
+				input.Accounts.BuildChatPermissionDeniedInspectInterval,
+				func(value config.Duration) { next.Accounts.BuildChatPermissionDeniedInspectInterval = value },
+			})
+		}
 	}
 	for _, item := range durations {
 		value, err := time.ParseDuration(strings.TrimSpace(item.value))
@@ -564,10 +598,14 @@ func toEditable(cfg config.Config) EditableConfig {
 		},
 		ClientKeyDefaults: ClientKeyDefaultsConfig{RPMLimit: cfg.ClientKeyDefaults.RPMLimit, MaxConcurrent: cfg.ClientKeyDefaults.MaxConcurrent},
 		Accounts: AccountsConfig{
-			AutoCleanReauthEnabled:   cfg.Accounts.AutoCleanReauthEnabled,
-			AutoCleanReauthInterval:  cfg.Accounts.AutoCleanReauthInterval.String(),
-			AutoCleanReauthMinAge:    cfg.Accounts.AutoCleanReauthMinAge.String(),
-			AutoCleanIncludeDisabled: cfg.Accounts.AutoCleanIncludeDisabled,
+			AutoCleanReauthEnabled:                      cfg.Accounts.AutoCleanReauthEnabled,
+			AutoCleanReauthInterval:                     cfg.Accounts.AutoCleanReauthInterval.String(),
+			AutoCleanReauthMinAge:                       cfg.Accounts.AutoCleanReauthMinAge.String(),
+			AutoCleanIncludeDisabled:                    cfg.Accounts.AutoCleanIncludeDisabled,
+			BuildChatPermissionDeniedRequestDisable:     cfg.Accounts.BuildChatPermissionDeniedRequestDisable,
+			BuildChatPermissionDeniedInspectEnabled:     cfg.Accounts.BuildChatPermissionDeniedInspectEnabled,
+			BuildChatPermissionDeniedInspectInterval:    cfg.Accounts.BuildChatPermissionDeniedInspectInterval.String(),
+			BuildChatPermissionDeniedInspectConcurrency: cfg.Accounts.BuildChatPermissionDeniedInspectConcurrency,
 		},
 		AccountsProvided: true,
 	}

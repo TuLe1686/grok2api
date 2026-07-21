@@ -277,6 +277,10 @@ type Service struct {
 	autoClean             AutoCleanConfig
 	autoCleanRevision     uint64
 	autoCleanWake         chan struct{}
+	buildChatDenyMu       sync.RWMutex
+	buildChatDeny         BuildChatPermissionDeniedConfig
+	buildChatDenyRevision uint64
+	buildChatDenyWake     chan struct{}
 	buildBotFlagCache     *resultcache.Cache[string, []uint64]
 	logger                *slog.Logger
 	now                   func() time.Time
@@ -301,7 +305,11 @@ func NewService(accounts repository.AccountRepository, audits repository.AuditRe
 		autoClean: AutoCleanConfig{
 			Enabled: false, Interval: 10 * time.Minute, MinAge: time.Hour, IncludeDisabled: false,
 		},
-		autoCleanWake:     make(chan struct{}, 1),
+		autoCleanWake: make(chan struct{}, 1),
+		buildChatDeny: BuildChatPermissionDeniedConfig{
+			RequestDisable: true, InspectEnabled: true, InspectInterval: 30 * time.Minute, InspectConcurrency: 4,
+		},
+		buildChatDenyWake: make(chan struct{}, 1),
 		buildBotFlagCache: resultcache.New[string, []uint64](1, buildBotFlagCacheTTL),
 		conversionPool:    batch.NewPool(25), syncPool: batch.NewPool(25), refreshPool: batch.NewPool(25), logger: slog.Default(),
 		now: func() time.Time { return time.Now().UTC() },
@@ -1538,6 +1546,29 @@ func (s *Service) MarkReauthRequired(ctx context.Context, id uint64, reason stri
 	}
 	value.AuthStatus = accountdomain.AuthStatusReauthRequired
 	value.LastError = reason
+	if len(value.LastError) > 512 {
+		value.LastError = value.LastError[:512]
+	}
+	if _, err := s.accounts.Update(ctx, value); err != nil {
+		return mapRepositoryError(err)
+	}
+	if s.sticky != nil {
+		_ = s.sticky.DeleteByAccount(ctx, id)
+	}
+	return nil
+}
+
+// DisableAccount turns the account off and records LastError so it leaves the routing pool.
+func (s *Service) DisableAccount(ctx context.Context, id uint64, reason string) error {
+	value, err := s.accounts.Get(ctx, id)
+	if err != nil {
+		return mapRepositoryError(err)
+	}
+	if !value.Enabled && strings.TrimSpace(value.LastError) == strings.TrimSpace(reason) {
+		return nil
+	}
+	value.Enabled = false
+	value.LastError = strings.TrimSpace(reason)
 	if len(value.LastError) > 512 {
 		value.LastError = value.LastError[:512]
 	}

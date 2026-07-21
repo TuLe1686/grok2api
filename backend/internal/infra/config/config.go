@@ -213,6 +213,11 @@ type AccountsConfig struct {
 	AutoCleanReauthInterval  Duration
 	AutoCleanReauthMinAge    Duration
 	AutoCleanIncludeDisabled bool
+	// Build chat endpoint permission-denied: disable whole Build accounts on request + timed inspect.
+	BuildChatPermissionDeniedRequestDisable     bool
+	BuildChatPermissionDeniedInspectEnabled     bool
+	BuildChatPermissionDeniedInspectInterval    Duration
+	BuildChatPermissionDeniedInspectConcurrency int
 }
 
 type Secrets struct {
@@ -498,6 +503,12 @@ func (c Config) Validate() error {
 	if c.Accounts.AutoCleanReauthMinAge.Value() < time.Minute || c.Accounts.AutoCleanReauthMinAge.Value() > 30*24*time.Hour {
 		return errors.New("accounts.autoCleanReauthMinAge 必须在 1 分钟到 30 天之间")
 	}
+	if c.Accounts.BuildChatPermissionDeniedInspectInterval.Value() < time.Minute || c.Accounts.BuildChatPermissionDeniedInspectInterval.Value() > 24*time.Hour {
+		return errors.New("accounts.buildChatPermissionDeniedInspectInterval 必须在 1 分钟到 24 小时之间")
+	}
+	if c.Accounts.BuildChatPermissionDeniedInspectConcurrency < 1 || c.Accounts.BuildChatPermissionDeniedInspectConcurrency > 32 {
+		return errors.New("accounts.buildChatPermissionDeniedInspectConcurrency 必须在 1 到 32 之间")
+	}
 	return nil
 }
 
@@ -593,10 +604,14 @@ func defaultConfig() Config {
 		Audit:             AuditConfig{BufferSize: 16384, BatchSize: 256, FlushInterval: Duration(250 * time.Millisecond)},
 		ClientKeyDefaults: ClientKeyDefaultsConfig{RPMLimit: clientkeydomain.DefaultRPMLimit, MaxConcurrent: clientkeydomain.DefaultMaxConcurrent},
 		Accounts: AccountsConfig{
-			AutoCleanReauthEnabled:   false,
-			AutoCleanReauthInterval:  Duration(10 * time.Minute),
-			AutoCleanReauthMinAge:    Duration(time.Hour),
-			AutoCleanIncludeDisabled: false,
+			AutoCleanReauthEnabled:                      false,
+			AutoCleanReauthInterval:                     Duration(10 * time.Minute),
+			AutoCleanReauthMinAge:                       Duration(time.Hour),
+			AutoCleanIncludeDisabled:                    false,
+			BuildChatPermissionDeniedRequestDisable:     true,
+			BuildChatPermissionDeniedInspectEnabled:     true,
+			BuildChatPermissionDeniedInspectInterval:    Duration(30 * time.Minute),
+			BuildChatPermissionDeniedInspectConcurrency: 4,
 		},
 	}
 }

@@ -857,7 +857,7 @@ func TestGatewayRefreshesAndRetriesBuildPermissionDenialOnce(t *testing.T) {
 	}
 }
 
-func TestBuildChatPermissionDenialDoesNotInvalidateVideoCredential(t *testing.T) {
+func TestBuildChatPermissionDenialDisablesWholeAccount(t *testing.T) {
 	ctx := context.Background()
 	database, err := relational.OpenSQLite(ctx, filepath.Join(t.TempDir(), "model-scoped-denial.db"))
 	if err != nil {
@@ -914,15 +914,17 @@ func TestBuildChatPermissionDenialDoesNotInvalidateVideoCredential(t *testing.T)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if updated.AuthStatus != account.AuthStatusActive || updated.FailureCount != 0 || updated.CooldownUntil != nil {
-		t.Fatalf("chat denial invalidated the whole credential: %#v", updated)
+	if updated.Enabled || !strings.Contains(updated.LastError, "permission-denied") {
+		t.Fatalf("chat denial did not disable the Build account: %#v", updated)
 	}
 	candidates, err := accountRepo.ListRoutingCandidates(ctx, account.ProviderBuild, "grok-chat-denied", "")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(candidates) != 1 || candidates[0].ModelQuotaBlock == nil || candidates[0].ModelQuotaBlock.Reason != "model_access_denied" {
-		t.Fatalf("model-scoped denial was not persisted: %#v", candidates)
+	for _, candidate := range candidates {
+		if candidate.Credential.ID == credential.ID {
+			t.Fatalf("disabled account still present in routing candidates: %#v", candidates)
+		}
 	}
 }
 
