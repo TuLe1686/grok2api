@@ -25,6 +25,7 @@ export function SettingsPage() {
   const { form, settingsQuery, updateMutation, reset } = useSettings();
   const [autoCleanConfirm, setAutoCleanConfirm] = useState<"enabled" | "includeDisabled" | null>(null);
   const autoCleanEnabled = form.watch("accounts.autoCleanReauthEnabled") === true;
+  const buildChatInspectEnabled = form.watch("accounts.buildChatPermissionDeniedInspectEnabled") === true;
 
   if (settingsQuery.isError) {
     return <ErrorState message={settingsQuery.error.message} onRetry={() => void settingsQuery.refetch()} />;
@@ -267,6 +268,28 @@ export function SettingsPage() {
                     />
                   </div>
                 )} />
+              </SettingsField>
+              <SettingsField controlId="accounts-build-chat-permission-denied-request-disable" label={t("settings.accounts.buildChatPermissionDeniedRequestDisable")} description={t("settings.accounts.buildChatPermissionDeniedRequestDisableHelp")}>
+                <Controller control={form.control} name="accounts.buildChatPermissionDeniedRequestDisable" render={({ field }) => (
+                  <div className="flex h-9 items-center">
+                    <Switch id="accounts-build-chat-permission-denied-request-disable" checked={Boolean(field.value)} onCheckedChange={field.onChange} />
+                  </div>
+                )} />
+              </SettingsField>
+              <SettingsField controlId="accounts-build-chat-permission-denied-inspect-enabled" label={t("settings.accounts.buildChatPermissionDeniedInspectEnabled")} description={t("settings.accounts.buildChatPermissionDeniedInspectEnabledHelp")}>
+                <Controller control={form.control} name="accounts.buildChatPermissionDeniedInspectEnabled" render={({ field }) => (
+                  <div className="flex h-9 items-center">
+                    <Switch id="accounts-build-chat-permission-denied-inspect-enabled" checked={Boolean(field.value)} onCheckedChange={field.onChange} />
+                  </div>
+                )} />
+              </SettingsField>
+              <SettingsField controlId="accounts-build-chat-permission-denied-inspect-interval" label={t("settings.accounts.buildChatPermissionDeniedInspectInterval")} description={t("settings.accounts.buildChatPermissionDeniedInspectIntervalHelp")} error={form.formState.errors.accounts?.buildChatPermissionDeniedInspectInterval?.message}>
+                <Controller control={form.control} name="accounts.buildChatPermissionDeniedInspectInterval" render={({ field }) => (
+                  <DurationInput id="accounts-build-chat-permission-denied-inspect-interval" value={field.value} onChange={field.onChange} disabled={!buildChatInspectEnabled} />
+                )} />
+              </SettingsField>
+              <SettingsField controlId="accounts-build-chat-permission-denied-inspect-concurrency" label={t("settings.accounts.buildChatPermissionDeniedInspectConcurrency")} description={t("settings.accounts.buildChatPermissionDeniedInspectConcurrencyHelp")} error={form.formState.errors.accounts?.buildChatPermissionDeniedInspectConcurrency?.message}>
+                <Input id="accounts-build-chat-permission-denied-inspect-concurrency" type="number" min={1} max={32} disabled={!buildChatInspectEnabled} {...form.register("accounts.buildChatPermissionDeniedInspectConcurrency", { valueAsNumber: true })} />
               </SettingsField>
             </div>
             <AlertDialog open={autoCleanConfirm !== null} onOpenChange={(open) => { if (!open) setAutoCleanConfirm(null); }}>

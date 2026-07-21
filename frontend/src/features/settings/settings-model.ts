@@ -121,6 +121,13 @@ export const settingsSchema = z.object({
       return seconds >= 60 && seconds <= 30 * 86_400;
     }),
     autoCleanIncludeDisabled: z.boolean(),
+    buildChatPermissionDeniedRequestDisable: z.boolean(),
+    buildChatPermissionDeniedInspectEnabled: z.boolean(),
+    buildChatPermissionDeniedInspectInterval: durationSchema.refine((value) => {
+      const seconds = durationSeconds(value);
+      return seconds >= 60 && seconds <= 24 * 3_600;
+    }),
+    buildChatPermissionDeniedInspectConcurrency: positiveInteger.max(32),
   }),
 });
 
@@ -160,6 +167,10 @@ export function toSettingsForm(config: SettingsConfigDTO): SettingsForm {
       autoCleanReauthInterval: parseDuration(config.accounts.autoCleanReauthInterval),
       autoCleanReauthMinAge: parseDuration(config.accounts.autoCleanReauthMinAge),
       autoCleanIncludeDisabled: config.accounts.autoCleanIncludeDisabled,
+      buildChatPermissionDeniedRequestDisable: config.accounts.buildChatPermissionDeniedRequestDisable,
+      buildChatPermissionDeniedInspectEnabled: config.accounts.buildChatPermissionDeniedInspectEnabled,
+      buildChatPermissionDeniedInspectInterval: parseDuration(config.accounts.buildChatPermissionDeniedInspectInterval),
+      buildChatPermissionDeniedInspectConcurrency: config.accounts.buildChatPermissionDeniedInspectConcurrency,
     },
   };
 }
@@ -197,6 +208,10 @@ export function toSettingsDTO(config: SettingsForm): SettingsConfigDTO {
       autoCleanReauthInterval: formatDuration(config.accounts.autoCleanReauthInterval),
       autoCleanReauthMinAge: formatDuration(config.accounts.autoCleanReauthMinAge),
       autoCleanIncludeDisabled: config.accounts.autoCleanIncludeDisabled,
+      buildChatPermissionDeniedRequestDisable: config.accounts.buildChatPermissionDeniedRequestDisable,
+      buildChatPermissionDeniedInspectEnabled: config.accounts.buildChatPermissionDeniedInspectEnabled,
+      buildChatPermissionDeniedInspectInterval: formatDuration(config.accounts.buildChatPermissionDeniedInspectInterval),
+      buildChatPermissionDeniedInspectConcurrency: config.accounts.buildChatPermissionDeniedInspectConcurrency,
     },
   };
 }

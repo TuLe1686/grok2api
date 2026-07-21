@@ -27,6 +27,10 @@ export type SettingsConfigDTO = {
     autoCleanReauthInterval: string;
     autoCleanReauthMinAge: string;
     autoCleanIncludeDisabled: boolean;
+    buildChatPermissionDeniedRequestDisable: boolean;
+    buildChatPermissionDeniedInspectEnabled: boolean;
+    buildChatPermissionDeniedInspectInterval: string;
+    buildChatPermissionDeniedInspectConcurrency: number;
   };
 };
 
@@ -69,12 +73,16 @@ const settingsConfigValidator = hasShape({
   routing: hasShape({ stickyTTL: isString, cooldownBase: isString, cooldownMax: isString, capacityWait: isString, maxAttempts: isNumber, preferFreeBuild: isBoolean }),
   audit: hasShape({ bufferSize: isNumber, batchSize: isNumber, flushInterval: isString }),
   clientKeyDefaults: hasShape({ rpmLimit: isNumber, maxConcurrent: isNumber }),
-  // 旧后端可无 accounts；decode 后由 withAccountsDefaults 补默认关闭策略。
+  // 旧后端可无 accounts 或缺少 Build 巡检字段；decode 后由 withAccountsDefaults 补默认。
   accounts: isOptional(hasShape({
     autoCleanReauthEnabled: isBoolean,
     autoCleanReauthInterval: isString,
     autoCleanReauthMinAge: isString,
     autoCleanIncludeDisabled: isBoolean,
+    buildChatPermissionDeniedRequestDisable: isOptional(isBoolean),
+    buildChatPermissionDeniedInspectEnabled: isOptional(isBoolean),
+    buildChatPermissionDeniedInspectInterval: isOptional(isString),
+    buildChatPermissionDeniedInspectConcurrency: isOptional(isNumber),
   })),
 });
 const defaultAccountsConfig = (): SettingsConfigDTO["accounts"] => ({
@@ -82,9 +90,14 @@ const defaultAccountsConfig = (): SettingsConfigDTO["accounts"] => ({
   autoCleanReauthInterval: "10m",
   autoCleanReauthMinAge: "1h",
   autoCleanIncludeDisabled: false,
+  buildChatPermissionDeniedRequestDisable: true,
+  buildChatPermissionDeniedInspectEnabled: true,
+  buildChatPermissionDeniedInspectInterval: "30m",
+  buildChatPermissionDeniedInspectConcurrency: 4,
 });
 function withAccountsDefaults(snapshot: SettingsSnapshotDTO): SettingsSnapshotDTO {
   const accounts = snapshot.config.accounts ?? defaultAccountsConfig();
+  const defaults = defaultAccountsConfig();
   return {
     ...snapshot,
     config: {
@@ -94,6 +107,10 @@ function withAccountsDefaults(snapshot: SettingsSnapshotDTO): SettingsSnapshotDT
         autoCleanReauthInterval: accounts.autoCleanReauthInterval || "10m",
         autoCleanReauthMinAge: accounts.autoCleanReauthMinAge || "1h",
         autoCleanIncludeDisabled: accounts.autoCleanIncludeDisabled ?? false,
+        buildChatPermissionDeniedRequestDisable: accounts.buildChatPermissionDeniedRequestDisable ?? defaults.buildChatPermissionDeniedRequestDisable,
+        buildChatPermissionDeniedInspectEnabled: accounts.buildChatPermissionDeniedInspectEnabled ?? defaults.buildChatPermissionDeniedInspectEnabled,
+        buildChatPermissionDeniedInspectInterval: accounts.buildChatPermissionDeniedInspectInterval || defaults.buildChatPermissionDeniedInspectInterval,
+        buildChatPermissionDeniedInspectConcurrency: accounts.buildChatPermissionDeniedInspectConcurrency ?? defaults.buildChatPermissionDeniedInspectConcurrency,
       },
     },
   };
